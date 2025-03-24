@@ -1,0 +1,2 @@
+### Create a new room
+GET http://localhost:5000/api/rooms/15
