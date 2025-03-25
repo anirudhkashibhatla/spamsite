@@ -1,0 +1,23 @@
+.message-board {
+  position: relative;
+  min-height: 100vh;
+  background-color: #121212;
+  background-image: url("/image.jpg");
+  background-size: cover; /* Ensures it fully covers the viewport */
+  background-position: center center; /* Centers the image */
+  background-repeat: no-repeat;
+  background-attachment: fixed; /* Keeps it fixed when scrolling */
+  color: white;
+}
+
+.input-wrapper {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 20;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  padding: 0 10px;
+}

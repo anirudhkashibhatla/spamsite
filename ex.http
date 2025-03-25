@@ -1,2 +1,2 @@
-### Create a new room
-GET http://localhost:5000/api/rooms/15
+GET http://localhost:5000/api/rooms/1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb29tSWQiOiIyIiwiaWF0IjoxNzQyOTEwMTc1LCJleHAiOjE3NDI5MTM3NzV9.KDNQ7_EKVCiIj_B28J-0f6gltAyf0h8mhD-0Dsc2oHU

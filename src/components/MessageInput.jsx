@@ -13,6 +13,7 @@ const MessageInput = ({
   postMessage,
   filter,
   setFilter,
+  maxDuration, // Add maxDuration as a prop
 }) => {
   const fileInputRef = useRef(null);
   const [preview, setPreview] = useState(null); // State to store the preview URL
@@ -112,6 +113,12 @@ const MessageInput = ({
         size="small"
         fullWidth
         sx={{ flex: "1 1 50px" }}
+        slotProps={{
+          input: {
+            min: 0, // Minimum value is 0
+            max: maxDuration || 3600, // Maximum value is maxDuration if provided
+          },
+        }}
       />
       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
         {/* Small Preview Icon */}

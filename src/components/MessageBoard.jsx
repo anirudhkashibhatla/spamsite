@@ -1,24 +1,161 @@
-import React, { useState, useRef } from "react";
-import { v4 as uuidv4 } from "uuid";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
+import PasswordDialog from "./PasswordDialog";
 import MessageBox from "./MessageBox";
 import MessageInput from "./MessageInput";
-import CreateRoomDialog from "./CreateRoomDialog";
-import { Box, Button } from "@mui/material";
+import CreateRoomButton from "./CreateRoomButton";
+import { Box } from "@mui/material";
+import "./MessageBoard.css";
+import Cookies from "js-cookie"; // Import js-cookie
 
-const MessageBoard = () => {
+const MessageBoard = ({ roomId, defaultRoomParams }) => {
+  const [roomParams, setRoomParams] = useState(defaultRoomParams); // Initialize with default params
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false); // Control password dialog visibility
+  const [isAuthenticated, setIsAuthenticated] = useState(false); // Track authentication status
+  const [isLoading, setIsLoading] = useState(true); // Track loading state
+  const [roomNotFound, setRoomNotFound] = useState(false); // Track if the room doesn't exist
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState("");
   const [messageId, setMessageId] = useState("");
   const [duration, setDuration] = useState("");
   const [filter, setFilter] = useState("");
   const [media, setMedia] = useState(null);
-  const [roomParams, setRoomParams] = useState(null); // Store room parameters
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [zIndexCounter, setZIndexCounter] = useState(10); // Track the highest zIndex
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const uniqueIndex = useRef(0); // Counter for unique indexes
 
-  window.filterMessages = (id) => setFilter(id);
+  // Fetch room parameters if roomId is provided
+  useEffect(() => {
+    const fetchRoomParams = async () => {
+      if (!roomId) {
+        console.log("No roomId provided. Skipping fetchRoomParams.");
+        setIsLoading(false); // Stop loading if no roomId is provided
+        return;
+      }
+
+      console.log(`Fetching room parameters for roomId(frontend): ${roomId}`);
+      try {
+        const token = Cookies.get("access_token"); // Retrieve the token from cookies
+        console.log("Access token from cookies:", token);
+        const response = await fetch(
+          `http://localhost:5000/api/rooms/${roomId}`,
+          {
+            headers: {
+              Authorization: token ? `Bearer ${token}` : undefined, // Include the token if it exists
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`Room parameters fetched for roomId ${roomId}:`, data);
+
+          if (data.requiresPassword && !token) {
+            console.log(`Room ${roomId} requires a password.`);
+            setIsPasswordDialogOpen(true);
+          } else {
+            setRoomParams(data);
+            setIsAuthenticated(true); // Mark the user as authenticated
+          }
+        } else if (response.status === 404) {
+          console.error(`Room with roomId ${roomId} does not exist.`);
+          setRoomNotFound(true); // Mark the room as not found
+        } else {
+          console.error(
+            `Failed to fetch room parameters for roomId ${roomId}. Status: ${response.status}`
+          );
+        }
+      } catch (error) {
+        console.error(
+          `Error fetching room parameters for roomId ${roomId}:`,
+          error
+        );
+      } finally {
+        setIsLoading(false); // Stop loading after fetching room parameters
+      }
+    };
+
+    fetchRoomParams();
+  }, [roomId]);
+
+  // Handle password authentication
+  const handleAuthenticate = async (enteredPassword) => {
+    console.log(`Authenticating password for roomId: ${roomId}`);
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/rooms/${roomId}/authenticate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ password: enteredPassword }),
+        }
+      );
+      console.log(`Response from authenticate for roomId ${roomId}:`, response);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          alert("Room not found. Please check the Room ID.");
+        } else {
+          alert("Authentication failed.");
+        }
+        return;
+      }
+
+      const data = await response.json();
+      console.log(`Authentication result for roomId ${roomId}:`, data);
+
+      if (data.success && data.token) {
+        console.log(
+          `Authentication successful for roomId ${roomId}. Storing token and fetching room data.`
+        );
+
+        // Store the token in cookies
+        Cookies.set("access_token", data.token, { expires: 1 }); // Expires in 1 day
+
+        setIsAuthenticated(true); // Mark the user as authenticated
+        setIsPasswordDialogOpen(false); // Close the password dialog
+
+        // Fetch the complete room data after successful authentication
+        const roomResponse = await fetch(
+          `http://localhost:5000/api/rooms/${roomId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${data.token}`, // Use the token in the Authorization header
+            },
+          }
+        );
+        console.log(
+          `Response from fetchRoomParams after authentication for roomId ${roomId}:`,
+          roomResponse
+        );
+
+        if (roomResponse.ok) {
+          const roomData = await roomResponse.json();
+          console.log(
+            `Complete room data fetched for roomId ${roomId}:`,
+            roomData
+          );
+          setRoomParams(roomData); // Set the complete room data
+        } else {
+          console.error(
+            `Failed to fetch complete room data for roomId ${roomId}. Status: ${roomResponse.status}`
+          );
+        }
+      } else {
+        alert("Incorrect password. Please try again.");
+      }
+    } catch (error) {
+      console.error(`Error during authentication for roomId ${roomId}:`, error);
+    }
+  };
+
+  const handleClosePasswordDialog = () => {
+    setIsPasswordDialogOpen(false);
+    navigate("/"); // Redirect to the base URL
+  };
 
   const postMessage = () => {
     if (!messageText && !media) return;
@@ -74,34 +211,58 @@ const MessageBoard = () => {
     setZIndexCounter((prev) => prev + 1); // Increment the zIndex counter
   };
 
-  const handleOpenDialog = () => {
-    setIsDialogOpen(true);
-  };
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          width: "100vw",
+          height: "100vh",
+          position: "fixed",
+          top: 0,
+          left: 0,
+        }}
+      >
+        Loading room parameters...
+      </div>
+    ); // Center the loading message in the middle of the viewport
+  }
 
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-  };
+  if (roomNotFound) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          width: "100vw",
+          height: "100vh",
+          position: "fixed",
+          top: 0,
+          left: 0,
+          color: "red", // Optional: Add styling to differentiate the error
+        }}
+      >
+        Room does not exist.
+      </div>
+    ); // Center the error message in the middle of the viewport
+  }
 
-  const handleCreateRoom = (params) => {
-    setRoomParams(params); // Save room parameters
-    console.log("Room Created with Params:", params);
-  };
+  // Show the password dialog if the user is not authenticated
+  if (isPasswordDialogOpen && !isAuthenticated) {
+    return (
+      <PasswordDialog
+        open={isPasswordDialogOpen}
+        onClose={handleClosePasswordDialog} // Redirect on close
+        onAuthenticate={handleAuthenticate}
+      />
+    );
+  }
 
   return (
-    <div
-      className="message-board"
-      style={{
-        position: "relative",
-        minHeight: "100vh",
-        backgroundColor: "#121212",
-        backgroundImage: "url('/image.jpg')",
-        backgroundSize: "cover", // Ensures it fully covers the viewport
-        backgroundPosition: "center center", // Centers the image
-        backgroundRepeat: "no-repeat",
-        backgroundAttachment: "fixed", // Keeps it fixed when scrolling
-        color: "white",
-      }}
-    >
+    <div className="message-board">
       {messages
         .filter((msg) => !filter || msg.id === filter)
         .map((msg) => (
@@ -112,23 +273,12 @@ const MessageBoard = () => {
             bringToFront={bringToFront} // Pass the bringToFront function
           />
         ))}
-      <Box
-        className="input-wrapper"
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          width: "100%",
-          zIndex: 20,
-          display: "flex",
-          alignItems: "stretch",
-          justifyContent: "space-between",
-          padding: "0 10px",
-        }}
-      >
-        <Button variant="contained" onClick={handleOpenDialog}>
-          Create Room
-        </Button>
+      <Box className="input-wrapper">
+        <CreateRoomButton
+          onRoomCreate={(params) => {
+            console.log("Room Created with Params:", params); // Log params directly
+          }}
+        />
         <MessageInput
           messageId={messageId}
           setMessageId={setMessageId}
@@ -142,11 +292,6 @@ const MessageBoard = () => {
           setFilter={setFilter}
         />
       </Box>
-      <CreateRoomDialog
-        open={isDialogOpen}
-        onClose={handleCloseDialog}
-        onCreate={handleCreateRoom}
-      />
     </div>
   );
 };
