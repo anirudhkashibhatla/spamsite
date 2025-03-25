@@ -158,33 +158,51 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
   };
 
   const postMessage = () => {
-    if (!messageText && !media) return;
+    if (!messageText && !media) {
+      console.warn("No message text or media provided. Aborting postMessage.");
+      return; // Ensure there's content to post
+    }
 
-    let maxWidth = window.innerWidth - 320;
+    let maxWidth = window.innerWidth - 320; // Prevent messages from going off-screen
     let maxHeight = window.innerHeight - 200;
+
+    // Validate and calculate duration
+    const parsedDuration = parseInt(duration, 10);
+    console.log("Parsed Duration:", parsedDuration);
+
+    const maxDuration = roomParams?.maxDuration;
+    const validMaxDuration =
+      !isNaN(maxDuration) && maxDuration > 0 ? maxDuration : 0; // Set to 0 if maxDuration is NaN or 0
+    console.log("Valid Max Duration:", validMaxDuration);
+
+    const finalDuration =
+      validMaxDuration === 0
+        ? 0 // If maxDuration is 0 or NaN, set duration to 0
+        : !duration || isNaN(parsedDuration) || parsedDuration <= 0
+        ? validMaxDuration // Use maxDuration if no valid duration is entered
+        : Math.min(parsedDuration, validMaxDuration); // Use entered duration, but enforce maxDuration
+    console.log("Final Duration:", finalDuration);
 
     const newMessage = {
       uniqueIndex: uniqueIndex.current++, // Assign a unique index
-      id: messageId.trim() || "anon",
+      id: messageId.trim() || "anon", // Default to "anon" if no ID is provided
       text: messageText,
       media,
       timestamp: new Date().toLocaleTimeString(),
       left: `${Math.random() * maxWidth}px`,
       top: `${Math.random() * maxHeight}px`,
-      duration: Math.min(
-        parseInt(duration, 10) || 0,
-        roomParams?.maxDuration || 60
-      ), // Enforce maxDuration
+      duration: finalDuration, // Enforce maxDuration or set to 0
       zIndex: zIndexCounter, // Assign the current highest zIndex
     };
 
-    setMessages((prev) => [...prev, newMessage]);
+    setMessages((prev) => [...prev, newMessage]); // Add the new message to the list
     setZIndexCounter((prev) => prev + 1); // Increment the zIndex counter
-    setMessageText("");
+    setMessageText(""); // Clear the input fields
     setMessageId("");
     setDuration("");
     setMedia(null);
 
+    // Automatically remove the message after its duration
     if (newMessage.duration > 0) {
       setTimeout(() => {
         setMessages((prev) =>
