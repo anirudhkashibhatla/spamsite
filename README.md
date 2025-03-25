@@ -1,4 +1,4 @@
-# SpamSite
+# spam-site
 
 ## Overview
 
