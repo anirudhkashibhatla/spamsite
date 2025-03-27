@@ -12,11 +12,11 @@ const MessageBoard = () => {
   const [duration, setDuration] = useState("");
   const [filter, setFilter] = useState("");
   const [media, setMedia] = useState(null);
-  const [roomParams, setRoomParams] = useState(null); // Store room parameters
+  const [roomParams, setRoomParams] = useState(null); 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [zIndexCounter, setZIndexCounter] = useState(10); // Track the highest zIndex
+  const [zIndexCounter, setZIndexCounter] = useState(10); //  highest zindex
 
-  const uniqueIndex = useRef(0); // Counter for unique indexes
+  const uniqueIndex = useRef(0); 
 
   window.filterMessages = (id) => setFilter(id);
 
@@ -27,7 +27,7 @@ const MessageBoard = () => {
     let maxHeight = window.innerHeight - 200;
 
     const newMessage = {
-      uniqueIndex: uniqueIndex.current++, // Assign a unique index
+      uniqueIndex: uniqueIndex.current++, 
       id: messageId.trim() || "anon",
       text: messageText,
       media,
@@ -37,12 +37,12 @@ const MessageBoard = () => {
       duration: Math.min(
         parseInt(duration, 10) || 0,
         roomParams?.maxDuration || 60
-      ), // Enforce maxDuration
-      zIndex: zIndexCounter, // Assign the current highest zIndex
+      ), 
+      zIndex: zIndexCounter, 
     };
 
     setMessages((prev) => [...prev, newMessage]);
-    setZIndexCounter((prev) => prev + 1); // Increment the zIndex counter
+    setZIndexCounter((prev) => prev + 1); 
     setMessageText("");
     setMessageId("");
     setDuration("");
@@ -67,11 +67,11 @@ const MessageBoard = () => {
     setMessages((prev) =>
       prev.map((msg) =>
         msg.uniqueIndex === uniqueIndex
-          ? { ...msg, zIndex: zIndexCounter } // Update zIndex for the clicked message
+          ? { ...msg, zIndex: zIndexCounter }
           : msg
       )
     );
-    setZIndexCounter((prev) => prev + 1); // Increment the zIndex counter
+    setZIndexCounter((prev) => prev + 1); 
   };
 
   const handleOpenDialog = () => {
@@ -83,7 +83,7 @@ const MessageBoard = () => {
   };
 
   const handleCreateRoom = (params) => {
-    setRoomParams(params); // Save room parameters
+    setRoomParams(params); 
     console.log("Room Created with Params:", params);
   };
 
@@ -95,10 +95,10 @@ const MessageBoard = () => {
         minHeight: "100vh",
         backgroundColor: "#121212",
         backgroundImage: "url('/image.jpg')",
-        backgroundSize: "cover", // Ensures it fully covers the viewport
-        backgroundPosition: "center center", // Centers the image
+        backgroundSize: "cover", 
+        backgroundPosition: "center center", 
         backgroundRepeat: "no-repeat",
-        backgroundAttachment: "fixed", // Keeps it fixed when scrolling
+        backgroundAttachment: "fixed", 
         color: "white",
       }}
     >
@@ -106,10 +106,10 @@ const MessageBoard = () => {
         .filter((msg) => !filter || msg.id === filter)
         .map((msg) => (
           <MessageBox
-            key={msg.uniqueIndex} // Use the unique index as the key
+            key={msg.uniqueIndex} 
             msg={msg}
             deleteMessage={deleteMessage}
-            bringToFront={bringToFront} // Pass the bringToFront function
+            bringToFront={bringToFront}
           />
         ))}
       <Box
