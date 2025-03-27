@@ -15,8 +15,8 @@ const MessageInput = ({
   setFilter,
 }) => {
   const fileInputRef = useRef(null);
-  const [preview, setPreview] = useState(null); // State to store the preview URL
-  const [previewType, setPreviewType] = useState(null); // State to store the type (image/video)
+  const [preview, setPreview] = useState(null);
+  const [previewType, setPreviewType] = useState(null);
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -29,10 +29,9 @@ const MessageInput = ({
       ];
       const validVideoTypes = ["video/mp4", "video/webm", "video/ogg"];
 
-      // Check if the file type is valid
       if (![...validImageTypes, ...validVideoTypes].includes(file.type)) {
         alert("Unsupported file type. Please upload an image or video.");
-        event.target.value = null; // Reset the file input
+        event.target.value = null;
         return;
       }
 
@@ -43,19 +42,18 @@ const MessageInput = ({
           url: e.target.result,
           type: fileType,
         });
-        setPreview(e.target.result); // Set the preview URL
-        setPreviewType(fileType); // Set the preview type
+        setPreview(e.target.result);
+        setPreviewType(fileType);
       };
       reader.readAsDataURL(file);
     }
-    // Reset the file input value to allow consecutive uploads of the same file
     event.target.value = null;
   };
 
   const handlePostMessage = () => {
-    postMessage(); // Call the parent `postMessage` function
-    setPreview(null); // Clear the preview
-    setPreviewType(null); // Clear the preview type
+    postMessage();
+    setPreview(null);
+    setPreviewType(null);
   };
 
   return (
@@ -79,10 +77,7 @@ const MessageInput = ({
         fullWidth
         sx={{ flex: "1 1 180px" }}
       />
-      <Button
-        variant="contained"
-        onClick={() => console.log("Filtering messages")}
-      >
+      <Button variant="contained" onClick={() => console.log("Filtering messages")}>
         Filter
       </Button>
       <TextField
@@ -91,8 +86,8 @@ const MessageInput = ({
         onChange={(e) => setMessageText(e.target.value)}
         size="small"
         multiline
-        minRows={1} // Starts with 3 rows
-        maxRows={4} // Expands up to 10 rows, then scrolls
+        minRows={1}
+        maxRows={4}
         fullWidth
         sx={{ flex: "1 1 300px" }}
       />
@@ -114,7 +109,6 @@ const MessageInput = ({
         sx={{ flex: "1 1 50px" }}
       />
       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        {/* Small Preview Icon */}
         {preview && (
           <Box
             sx={{
@@ -150,10 +144,7 @@ const MessageInput = ({
           inputRef={fileInputRef}
           onChange={handleFileChange}
         />
-        <IconButton
-          color="primary"
-          onClick={() => fileInputRef.current.click()}
-        >
+        <IconButton color="primary" onClick={() => fileInputRef.current.click()}>
           <PhotoCamera />
         </IconButton>
       </Box>
