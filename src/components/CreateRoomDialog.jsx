@@ -31,7 +31,7 @@ const CreateRoomDialog = ({ open, onClose, onCreate }) => {
     const roomParams = {
       roomId: roomId.trim(),
       password: password.trim(),
-      roomLife: parseInt(roomLife, 10), // Pass room life instead of duration
+      roomLife: parseInt(roomLife, 10), 
       layout,
       upvote,
       rateLimit: parseInt(rateLimit, 10),
@@ -64,7 +64,7 @@ const CreateRoomDialog = ({ open, onClose, onCreate }) => {
         const data = await createResponse.json();
         console.log("Room created successfully:", data);
         onCreate(roomParams); // Pass parameters to MessageBoard
-        onClose(); // Close the dialog
+        onClose(); 
       } else {
         const errorData = await createResponse.json();
         alert(`Failed to create room: ${errorData.error}`);
