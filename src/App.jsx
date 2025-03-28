@@ -6,7 +6,7 @@ import {
   useParams,
 } from "react-router-dom";
 import MessageBoard from "./components/MessageBoard";
-
+import DrawingCanvas from "./DrawingCanvas";
 const App = () => {
   return (
     <Router>
@@ -15,6 +15,7 @@ const App = () => {
         <Route path="/:roomId" element={<MessageBoardWrapper />} />
         {/* Base URL route with default params */}
         <Route path="/" element={<MessageBoardWrapper />} />
+        <Route path="/canvas" element={<DrawingCanvas />} />
       </Routes>
     </Router>
   );

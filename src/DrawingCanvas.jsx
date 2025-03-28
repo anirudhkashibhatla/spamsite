@@ -24,16 +24,20 @@ const DrawingCanvas = () => {
     const canvas = canvasRef.current;
     if (canvas) {
       canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight - 80; // reserve space for toolbar
+      canvas.height = window.innerHeight - 80; // Reserve space for toolbar
       const context = canvas.getContext("2d");
       setCtx(context);
+
+      // Set the initial background color to white
+      context.fillStyle = "#ffffff"; // White background color
+      context.fillRect(0, 0, canvas.width, canvas.height);
     }
   }, []);
 
   // Update drawing settings on context change
   useEffect(() => {
     if (ctx) {
-      ctx.strokeStyle = isErasing ? "#ffffff" : color;
+      ctx.strokeStyle = isErasing ? "#ffffff" : color; // Use white for erasing
       ctx.lineWidth = thickness;
       switch (lineStyle) {
         case "dashed":
@@ -71,10 +75,16 @@ const DrawingCanvas = () => {
   };
 
   return (
-    <div>
+    <div
+      style={{ backgroundColor: "#ffffff", height: "100vh", width: "100vw" }}
+    >
       <canvas
         ref={canvasRef}
-        style={{ border: "1px solid #ccc", display: "block" }}
+        style={{
+          border: "1px solid #ccc",
+          display: "block",
+          backgroundColor: "#ffffff", // Set the canvas background color to white
+        }}
         onMouseDown={startDrawing}
         onMouseMove={draw}
         onMouseUp={stopDrawing}
@@ -99,7 +109,7 @@ const DrawingCanvas = () => {
           type="color"
           value={color}
           onChange={(e) => setColor(e.target.value)}
-          InputLabelProps={{ shrink: true }}
+          slotProps={{ inputLabel: { shrink: true } }}
           disabled={isErasing}
         />
         <TextField
@@ -110,7 +120,7 @@ const DrawingCanvas = () => {
             const value = parseInt(e.target.value, 10);
             setThickness(value >= 0 && value <= 50 ? value : thickness);
           }}
-          InputLabelProps={{ shrink: true }}
+          slotProps={{ inputLabel: { shrink: true } }}
         />
         <FormControl variant="outlined" style={{ minWidth: 120 }}>
           <InputLabel id="line-style-label">Line Style</InputLabel>

@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 
-const MessageBox = ({ msg, bringToFront, deleteMessage }) => {
+const MessageBox = ({ msg, bringToFront, deleteMessage, setFilter }) => {
   const boxRef = useRef(null); // Reference to the message box
   const offset = useRef({ x: 0, y: 0 }); // Stores mouse offset position
   const [position, setPosition] = useState({ left: msg.left, top: msg.top }); // Track position
@@ -99,7 +99,8 @@ const MessageBox = ({ msg, bringToFront, deleteMessage }) => {
             href="#"
             onClick={(e) => {
               e.preventDefault();
-              window.filterMessages(msg.id); // Filter messages based on ID
+              setFilter(msg.id); // Directly set the filter state
+              console.log("Filtering messages by ID:", msg.id);
             }}
             style={{
               color: "blue",
@@ -147,7 +148,9 @@ const MessageBox = ({ msg, bringToFront, deleteMessage }) => {
               href="#"
               onClick={(e) => {
                 e.preventDefault();
-                window.filterMessages(part.substring(1));
+                // window.filterMessages(part.substring(1));
+                setFilter(part.substring(1)); // Directly set the filter state
+                console.log("Filtering messages by ID:", msg.id);
               }}
               style={{ color: "blue", textDecoration: "underline" }}
             >

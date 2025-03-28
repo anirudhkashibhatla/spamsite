@@ -7,6 +7,7 @@ import CreateRoomButton from "./CreateRoomButton";
 import { Box } from "@mui/material";
 import "./MessageBoard.css";
 import Cookies from "js-cookie"; // Import js-cookie
+import { io } from "socket.io-client"; // Import socket.io-client
 
 const MessageBoard = ({ roomId, defaultRoomParams }) => {
   const [roomParams, setRoomParams] = useState(defaultRoomParams); // Initialize with default params
@@ -24,6 +25,94 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
   const navigate = useNavigate(); // Initialize useNavigate
 
   const uniqueIndex = useRef(0); // Counter for unique indexes
+
+  // WebRTC-related state and refs
+  const peerConnection = useRef(null);
+  const dataChannel = useRef(null);
+  const socket = useRef(null); // Socket.io for signaling
+
+  // Initialize WebRTC connection
+  useEffect(() => {
+    // Connect to the signaling server
+    socket.current = io("http://localhost:5001");
+
+    socket.current.on("connect", () => {
+      console.log("Connected to signaling server:", socket.current.id);
+    });
+
+    // Handle incoming signaling messages
+    socket.current.on("signal", async ({ sender, signal }) => {
+      console.log("Signal received from:", sender, signal);
+
+      if (signal.type === "offer") {
+        console.log("Processing WebRTC offer...");
+        await peerConnection.current.setRemoteDescription(signal);
+        const answer = await peerConnection.current.createAnswer();
+        await peerConnection.current.setLocalDescription(answer);
+
+        socket.current.emit("signal", {
+          target: sender,
+          signal: peerConnection.current.localDescription,
+        });
+      } else if (signal.type === "answer") {
+        console.log("Processing WebRTC answer...");
+        await peerConnection.current.setRemoteDescription(signal);
+      } else if (signal.candidate) {
+        console.log("Processing ICE candidate...");
+        await peerConnection.current.addIceCandidate(signal.candidate);
+      }
+    });
+
+    // Initialize WebRTC connection
+    // Initialize WebRTC connection
+    peerConnection.current = new RTCPeerConnection();
+
+    // Handle ICE candidates
+    peerConnection.current.onicecandidate = (event) => {
+      if (event.candidate) {
+        console.log("Sending ICE candidate:", event.candidate);
+        socket.current.emit("signal", {
+          target: "target-peer-id", // Replace with the actual target peer ID
+          signal: event.candidate,
+        });
+      } else {
+        console.log("All ICE candidates have been sent.");
+      }
+    };
+
+    // Create a data channel for messaging
+    dataChannel.current = peerConnection.current.createDataChannel("messages");
+
+    dataChannel.current.onopen = () => {
+      console.log("DataChannel is open and ready to send messages.");
+    };
+
+    dataChannel.current.onclose = () => {
+      console.log("DataChannel is closed.");
+    };
+
+    dataChannel.current.onerror = (error) => {
+      console.error("DataChannel error:", error);
+    };
+
+    dataChannel.current.onmessage = (event) => {
+      console.log("Message received via DataChannel:", event.data);
+      const receivedMessage = JSON.parse(event.data);
+      setMessages((prev) => [...prev, receivedMessage]);
+    };
+
+    peerConnection.current.onconnectionstatechange = () => {
+      console.log(
+        "Connection state changed:",
+        peerConnection.current.connectionState
+      );
+    };
+
+    return () => {
+      socket.current.disconnect();
+      peerConnection.current.close();
+    };
+  }, []);
 
   // Fetch room parameters if roomId is provided
   useEffect(() => {
@@ -157,6 +246,15 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
     navigate("/"); // Redirect to the base URL
   };
 
+  const sendMessage = (message) => {
+    if (dataChannel.current && dataChannel.current.readyState === "open") {
+      console.log("Sending message via DataChannel:", message);
+      dataChannel.current.send(JSON.stringify(message));
+    } else {
+      console.error("DataChannel is not open. Cannot send message.");
+    }
+  };
+
   const postMessage = () => {
     if (!messageText && !media) {
       console.warn("No message text or media provided. Aborting postMessage.");
@@ -201,6 +299,9 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
     setMessageId("");
     setDuration("");
     setMedia(null);
+
+    // Send the message via WebRTC
+    sendMessage(newMessage);
 
     // Automatically remove the message after its duration
     if (newMessage.duration > 0) {
@@ -287,8 +388,13 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
           <MessageBox
             key={msg.uniqueIndex} // Use the unique index as the key
             msg={msg}
-            deleteMessage={deleteMessage}
-            bringToFront={bringToFront} // Pass the bringToFront function
+            bringToFront={(uniqueIndex) => {
+              // Logic to bring the message to the front
+            }}
+            deleteMessage={(uniqueIndex) => {
+              // Logic to delete the message
+            }}
+            setFilter={setFilter} // Pass the setFilter function as a prop
           />
         ))}
       <Box className="input-wrapper">
