@@ -1,137 +1,147 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
 import PasswordDialog from "./PasswordDialog";
 import MessageBox from "./MessageBox";
 import MessageInput from "./MessageInput";
 import CreateRoomButton from "./CreateRoomButton";
 import { Box } from "@mui/material";
 import "./MessageBoard.css";
-import Cookies from "js-cookie"; // Import js-cookie
-import { io } from "socket.io-client"; // Import socket.io-client
+import Cookies from "js-cookie";
+import { io } from "socket.io-client";
 
 const MessageBoard = ({ roomId, defaultRoomParams }) => {
-  const [roomParams, setRoomParams] = useState(defaultRoomParams); // Initialize with default params
-  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false); // Control password dialog visibility
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // Track authentication status
-  const [isLoading, setIsLoading] = useState(true); // Track loading state
-  const [roomNotFound, setRoomNotFound] = useState(false); // Track if the room doesn't exist
+  const [roomParams, setRoomParams] = useState(defaultRoomParams);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [roomNotFound, setRoomNotFound] = useState(false);
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState("");
   const [messageId, setMessageId] = useState("");
   const [duration, setDuration] = useState("");
   const [filter, setFilter] = useState("");
   const [media, setMedia] = useState(null);
-  const [zIndexCounter, setZIndexCounter] = useState(10); // Track the highest zIndex
-  const navigate = useNavigate(); // Initialize useNavigate
+  const [zIndexCounter, setZIndexCounter] = useState(10);
+  const navigate = useNavigate();
 
-  const uniqueIndex = useRef(0); // Counter for unique indexes
+  const uniqueIndex = useRef(0);
 
-  // WebRTC-related state and refs
   const peerConnection = useRef(null);
   const dataChannel = useRef(null);
-  const socket = useRef(null); // Socket.io for signaling
+  const socket = useRef(null);
 
-  // Initialize WebRTC connection
+  const initializeWebRTC = async () => {
+    peerConnection.current = new RTCPeerConnection({
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+      ],
+    });
+
+    peerConnection.current.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.current.emit("ice-candidate", {
+          candidate: event.candidate,
+          roomId: roomId,
+        });
+      }
+    };
+
+    dataChannel.current = peerConnection.current.createDataChannel("chat", {
+      negotiated: true,
+      id: 0,
+    });
+
+    dataChannel.current.onopen = () => {
+      console.log("Data channel is open");
+    };
+
+    dataChannel.current.onclose = () => {
+      console.log("Data channel closed");
+      initializeWebRTC();
+    };
+
+    dataChannel.current.onmessage = (event) => {
+      console.log("Received message:", event.data);
+      const receivedMessage = JSON.parse(event.data);
+
+      setMessages((prev) => [...prev, receivedMessage]);
+
+      if (receivedMessage.shouldAutoDelete && receivedMessage.duration > 0) {
+        setTimeout(() => {
+          setMessages((prev) =>
+            prev.filter(
+              (msg) => msg.uniqueIndex !== receivedMessage.uniqueIndex
+            )
+          );
+        }, receivedMessage.duration * 1000);
+      }
+    };
+
+    const offer = await peerConnection.current.createOffer();
+    await peerConnection.current.setLocalDescription(offer);
+
+    socket.current.emit("webrtc-offer", {
+      offer,
+      roomId: roomId,
+    });
+  };
+
   useEffect(() => {
-    // Connect to the signaling server
     socket.current = io("http://localhost:5001");
 
     socket.current.on("connect", () => {
       console.log("Connected to signaling server:", socket.current.id);
+      socket.current.emit("join-room", roomId);
+      initializeWebRTC();
     });
 
-    // Handle incoming signaling messages
-    socket.current.on("signal", async ({ sender, signal }) => {
-      console.log("Signal received from:", sender, signal);
-
-      if (signal.type === "offer") {
-        console.log("Processing WebRTC offer...");
-        await peerConnection.current.setRemoteDescription(signal);
-        const answer = await peerConnection.current.createAnswer();
-        await peerConnection.current.setLocalDescription(answer);
-
-        socket.current.emit("signal", {
-          target: sender,
-          signal: peerConnection.current.localDescription,
-        });
-      } else if (signal.type === "answer") {
-        console.log("Processing WebRTC answer...");
-        await peerConnection.current.setRemoteDescription(signal);
-      } else if (signal.candidate) {
-        console.log("Processing ICE candidate...");
-        await peerConnection.current.addIceCandidate(signal.candidate);
+    socket.current.on("webrtc-offer", async (data) => {
+      if (!peerConnection.current) {
+        await initializeWebRTC();
       }
+
+      await peerConnection.current.setRemoteDescription(data.offer);
+      const answer = await peerConnection.current.createAnswer();
+      await peerConnection.current.setLocalDescription(answer);
+
+      socket.current.emit("webrtc-answer", {
+        answer,
+        roomId: data.roomId,
+      });
     });
 
-    // Initialize WebRTC connection
-    // Initialize WebRTC connection
-    peerConnection.current = new RTCPeerConnection();
+    socket.current.on("webrtc-answer", async (data) => {
+      await peerConnection.current.setRemoteDescription(data.answer);
+    });
 
-    // Handle ICE candidates
-    peerConnection.current.onicecandidate = (event) => {
-      if (event.candidate) {
-        console.log("Sending ICE candidate:", event.candidate);
-        socket.current.emit("signal", {
-          target: "target-peer-id", // Replace with the actual target peer ID
-          signal: event.candidate,
-        });
-      } else {
-        console.log("All ICE candidates have been sent.");
-      }
-    };
-
-    // Create a data channel for messaging
-    dataChannel.current = peerConnection.current.createDataChannel("messages");
-
-    dataChannel.current.onopen = () => {
-      console.log("DataChannel is open and ready to send messages.");
-    };
-
-    dataChannel.current.onclose = () => {
-      console.log("DataChannel is closed.");
-    };
-
-    dataChannel.current.onerror = (error) => {
-      console.error("DataChannel error:", error);
-    };
-
-    dataChannel.current.onmessage = (event) => {
-      console.log("Message received via DataChannel:", event.data);
-      const receivedMessage = JSON.parse(event.data);
-      setMessages((prev) => [...prev, receivedMessage]);
-    };
-
-    peerConnection.current.onconnectionstatechange = () => {
-      console.log(
-        "Connection state changed:",
-        peerConnection.current.connectionState
-      );
-    };
+    socket.current.on("ice-candidate", async (data) => {
+      await peerConnection.current.addIceCandidate(data.candidate);
+    });
 
     return () => {
       socket.current.disconnect();
-      peerConnection.current.close();
+      peerConnection.current?.close();
     };
-  }, []);
+  }, [roomId]);
 
-  // Fetch room parameters if roomId is provided
   useEffect(() => {
     const fetchRoomParams = async () => {
       if (!roomId) {
         console.log("No roomId provided. Skipping fetchRoomParams.");
-        setIsLoading(false); // Stop loading if no roomId is provided
+        setIsLoading(false);
         return;
       }
 
       console.log(`Fetching room parameters for roomId(frontend): ${roomId}`);
       try {
-        const token = Cookies.get("access_token"); // Retrieve the token from cookies
+        const token = Cookies.get("access_token");
         console.log("Access token from cookies:", token);
         const response = await fetch(
           `http://localhost:5000/api/rooms/${roomId}`,
           {
             headers: {
-              Authorization: token ? `Bearer ${token}` : undefined, // Include the token if it exists
+              Authorization: token ? `Bearer ${token}` : undefined,
             },
           }
         );
@@ -145,11 +155,11 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
             setIsPasswordDialogOpen(true);
           } else {
             setRoomParams(data);
-            setIsAuthenticated(true); // Mark the user as authenticated
+            setIsAuthenticated(true);
           }
         } else if (response.status === 404) {
           console.error(`Room with roomId ${roomId} does not exist.`);
-          setRoomNotFound(true); // Mark the room as not found
+          setRoomNotFound(true);
         } else {
           console.error(
             `Failed to fetch room parameters for roomId ${roomId}. Status: ${response.status}`
@@ -161,14 +171,13 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
           error
         );
       } finally {
-        setIsLoading(false); // Stop loading after fetching room parameters
+        setIsLoading(false);
       }
     };
 
     fetchRoomParams();
   }, [roomId]);
 
-  // Handle password authentication
   const handleAuthenticate = async (enteredPassword) => {
     console.log(`Authenticating password for roomId: ${roomId}`);
     try {
@@ -201,18 +210,16 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
           `Authentication successful for roomId ${roomId}. Storing token and fetching room data.`
         );
 
-        // Store the token in cookies
-        Cookies.set("access_token", data.token, { expires: 1 }); // Expires in 1 day
+        Cookies.set("access_token", data.token, { expires: 1 });
 
-        setIsAuthenticated(true); // Mark the user as authenticated
-        setIsPasswordDialogOpen(false); // Close the password dialog
+        setIsAuthenticated(true);
+        setIsPasswordDialogOpen(false);
 
-        // Fetch the complete room data after successful authentication
         const roomResponse = await fetch(
           `http://localhost:5000/api/rooms/${roomId}`,
           {
             headers: {
-              Authorization: `Bearer ${data.token}`, // Use the token in the Authorization header
+              Authorization: `Bearer ${data.token}`,
             },
           }
         );
@@ -227,7 +234,7 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
             `Complete room data fetched for roomId ${roomId}:`,
             roomData
           );
-          setRoomParams(roomData); // Set the complete room data
+          setRoomParams(roomData);
         } else {
           console.error(
             `Failed to fetch complete room data for roomId ${roomId}. Status: ${roomResponse.status}`
@@ -243,13 +250,19 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
 
   const handleClosePasswordDialog = () => {
     setIsPasswordDialogOpen(false);
-    navigate("/"); // Redirect to the base URL
+    navigate("/");
   };
 
   const sendMessage = (message) => {
     if (dataChannel.current && dataChannel.current.readyState === "open") {
       console.log("Sending message via DataChannel:", message);
-      dataChannel.current.send(JSON.stringify(message));
+
+      const messageWithDeletionInfo = {
+        ...message,
+        shouldAutoDelete: message.duration > 0,
+      };
+
+      dataChannel.current.send(JSON.stringify(messageWithDeletionInfo));
     } else {
       console.error("DataChannel is not open. Cannot send message.");
     }
@@ -258,52 +271,49 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
   const postMessage = () => {
     if (!messageText && !media) {
       console.warn("No message text or media provided. Aborting postMessage.");
-      return; // Ensure there's content to post
+      return;
     }
 
-    let maxWidth = window.innerWidth - 320; // Prevent messages from going off-screen
+    let maxWidth = window.innerWidth - 320;
     let maxHeight = window.innerHeight - 200;
 
-    // Validate and calculate duration
     const parsedDuration = parseInt(duration, 10);
     console.log("Parsed Duration:", parsedDuration);
 
     const maxDuration = roomParams?.maxDuration;
     const validMaxDuration =
-      !isNaN(maxDuration) && maxDuration > 0 ? maxDuration : 0; // Set to 0 if maxDuration is NaN or 0
+      !isNaN(maxDuration) && maxDuration > 0 ? maxDuration : 0;
     console.log("Valid Max Duration:", validMaxDuration);
 
     const finalDuration =
       validMaxDuration === 0
-        ? 0 // If maxDuration is 0 or NaN, set duration to 0
+        ? 0
         : !duration || isNaN(parsedDuration) || parsedDuration <= 0
-        ? validMaxDuration // Use maxDuration if no valid duration is entered
-        : Math.min(parsedDuration, validMaxDuration); // Use entered duration, but enforce maxDuration
+        ? validMaxDuration
+        : Math.min(parsedDuration, validMaxDuration);
     console.log("Final Duration:", finalDuration);
 
     const newMessage = {
-      uniqueIndex: uniqueIndex.current++, // Assign a unique index
-      id: messageId.trim() || "anon", // Default to "anon" if no ID is provided
+      uniqueIndex: uniqueIndex.current++,
+      id: messageId.trim() || "anon",
       text: messageText,
       media,
       timestamp: new Date().toLocaleTimeString(),
       left: `${Math.random() * maxWidth}px`,
       top: `${Math.random() * maxHeight}px`,
-      duration: finalDuration, // Enforce maxDuration or set to 0
-      zIndex: zIndexCounter, // Assign the current highest zIndex
+      duration: finalDuration,
+      zIndex: zIndexCounter,
     };
 
-    setMessages((prev) => [...prev, newMessage]); // Add the new message to the list
-    setZIndexCounter((prev) => prev + 1); // Increment the zIndex counter
-    setMessageText(""); // Clear the input fields
+    setMessages((prev) => [...prev, newMessage]);
+    setZIndexCounter((prev) => prev + 1);
+    setMessageText("");
     setMessageId("");
     setDuration("");
     setMedia(null);
 
-    // Send the message via WebRTC
     sendMessage(newMessage);
 
-    // Automatically remove the message after its duration
     if (newMessage.duration > 0) {
       setTimeout(() => {
         setMessages((prev) =>
@@ -323,11 +333,11 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
     setMessages((prev) =>
       prev.map((msg) =>
         msg.uniqueIndex === uniqueIndex
-          ? { ...msg, zIndex: zIndexCounter } // Update zIndex for the clicked message
+          ? { ...msg, zIndex: zIndexCounter }
           : msg
       )
     );
-    setZIndexCounter((prev) => prev + 1); // Increment the zIndex counter
+    setZIndexCounter((prev) => prev + 1);
   };
 
   if (isLoading) {
@@ -346,7 +356,7 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
       >
         Loading room parameters...
       </div>
-    ); // Center the loading message in the middle of the viewport
+    );
   }
 
   if (roomNotFound) {
@@ -361,20 +371,19 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
           position: "fixed",
           top: 0,
           left: 0,
-          color: "red", // Optional: Add styling to differentiate the error
+          color: "red",
         }}
       >
         Room does not exist.
       </div>
-    ); // Center the error message in the middle of the viewport
+    );
   }
 
-  // Show the password dialog if the user is not authenticated
   if (isPasswordDialogOpen && !isAuthenticated) {
     return (
       <PasswordDialog
         open={isPasswordDialogOpen}
-        onClose={handleClosePasswordDialog} // Redirect on close
+        onClose={handleClosePasswordDialog}
         onAuthenticate={handleAuthenticate}
       />
     );
@@ -386,21 +395,17 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
         .filter((msg) => !filter || msg.id === filter)
         .map((msg) => (
           <MessageBox
-            key={msg.uniqueIndex} // Use the unique index as the key
+            key={msg.uniqueIndex}
             msg={msg}
-            bringToFront={(uniqueIndex) => {
-              // Logic to bring the message to the front
-            }}
-            deleteMessage={(uniqueIndex) => {
-              // Logic to delete the message
-            }}
-            setFilter={setFilter} // Pass the setFilter function as a prop
+            bringToFront={(uniqueIndex) => {}}
+            deleteMessage={(uniqueIndex) => {}}
+            setFilter={setFilter}
           />
         ))}
       <Box className="input-wrapper">
         <CreateRoomButton
           onRoomCreate={(params) => {
-            console.log("Room Created with Params:", params); // Log params directly
+            console.log("Room Created with Params:", params);
           }}
         />
         <MessageInput
