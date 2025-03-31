@@ -12,7 +12,6 @@ SpamSite is a p2p platform designed for creating and managing chat rooms where u
 - **Dynamic Message Management**: Messages automatically expire based on their duration or room settings.
 - **Interactive UI**: Drag-and-drop messages, bring them to the front, or delete them dynamically.
 - **Filter Messages**: Filter messages by user ID for focused communication.
-![Uploading image.png…]()
 
 ## Installation
 
