@@ -2,16 +2,17 @@
 
 ## Overview
 
-SpamSite is a dynamic and interactive platform designed for creating and managing chat rooms where users can post messages with customizable durations, layouts, and other features. It provides a flexible environment for real-time communication and experimentation with message visibility and room configurations.
+SpamSite is a p2p platform designed for creating and managing chat rooms where users can post messages with customizable durations, layouts, and other features. It provides a flexible environment for real-time communication and experimentation with message visibility and room configurations.
 
 ## Features
 
-- **Room Creation**: Create chat rooms with unique IDs, passwords, and customizable settings.
-- **Message Posting**: Post messages with optional media, custom durations, and random positioning.
-- **Room Customization**: Configure room layouts, enable/disable upvotes, set message rate limits, and define maximum message durations.
+- **Room Creation**: Create chat rooms with unique IDs, passwords, and customizable settings.Rooms expire post room life duration.
+- **Message Posting**: Post message boxes with  media, custom durations, and random positioning.
+- **Room Customization**: Configure room layouts, set message rate limits, and define maximum message durations.
 - **Dynamic Message Management**: Messages automatically expire based on their duration or room settings.
 - **Interactive UI**: Drag-and-drop messages, bring them to the front, or delete them dynamically.
 - **Filter Messages**: Filter messages by user ID for focused communication.
+![Uploading image.png…]()
 
 ## Installation
 
