@@ -315,9 +315,14 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
     sendMessage(newMessage);
 
     if (newMessage.duration > 0) {
+      console.log("yes", newMessage.duration);
       setTimeout(() => {
-        setMessages((prev) =>
-          prev.filter((msg) => msg.uniqueIndex !== newMessage.uniqueIndex)
+        setMessages(
+          (prev) =>
+            prev.filter((msg) => msg.uniqueIndex !== newMessage.uniqueIndex),
+          console.log(
+            `Message with uniqueIndex ${newMessage.uniqueIndex} deleted after ${newMessage.duration} seconds.`
+          )
         );
       }, newMessage.duration * 1000);
     }
@@ -397,8 +402,8 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
           <MessageBox
             key={msg.uniqueIndex}
             msg={msg}
-            bringToFront={(uniqueIndex) => {}}
-            deleteMessage={(uniqueIndex) => {}}
+            bringToFront={bringToFront}
+            deleteMessage={deleteMessage}
             setFilter={setFilter}
           />
         ))}

@@ -12,8 +12,8 @@ const PasswordDialog = ({ open, onClose, onAuthenticate }) => {
   const [password, setPassword] = useState("");
 
   const handleAuthenticate = () => {
-    onAuthenticate(password); // Pass the entered password to the parent component
-    setPassword(""); // Clear the password field
+    onAuthenticate(password);
+    setPassword("");
   };
 
   return (
@@ -37,7 +37,7 @@ const PasswordDialog = ({ open, onClose, onAuthenticate }) => {
           onClick={handleAuthenticate}
           color="primary"
           variant="contained"
-          disabled={!password.trim()} // Disable button if password is empty
+          disabled={!password.trim()}
         >
           Authenticate
         </Button>
@@ -46,4 +46,4 @@ const PasswordDialog = ({ open, onClose, onAuthenticate }) => {
   );
 };
 
-export default PasswordDialog; // Ensure this is exported as default
+export default PasswordDialog;

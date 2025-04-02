@@ -11,7 +11,6 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        {/* Route with roomId */}
         <Route path="/:roomId" element={<MessageBoardWrapper />} />
         {/* Base URL route with default params */}
         <Route path="/" element={<MessageBoardWrapper />} />
@@ -21,23 +20,20 @@ const App = () => {
   );
 };
 
-// Wrapper to handle roomId and default params
 const MessageBoardWrapper = () => {
-  const { roomId } = useParams(); // Get roomId from the URL
-
-  // Default room parameters
+  const { roomId } = useParams();
   const defaultRoomParams = {
-    roomLife: 3600, // Default room life in seconds
+    roomLife: 3600,
     layout: "Default",
     upvote: "Disabled",
-    rateLimit: 0, // No rate limit
-    maxDuration: 0, // No duration limit
+    rateLimit: 0,
+    maxDuration: 0,
   };
 
   return (
     <MessageBoard
-      roomId={roomId || null} // Pass roomId if available, otherwise null
-      defaultRoomParams={defaultRoomParams} // Pass default params
+      roomId={roomId || null}
+      defaultRoomParams={defaultRoomParams}
     />
   );
 };

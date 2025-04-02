@@ -3,10 +3,10 @@
   min-height: 100vh;
   background-color: #760606;
   background-image: url("/image.jpg");
-  background-size: cover; /* Ensures it fully covers the viewport */
-  background-position: center center; /* Centers the image */
+  background-size: cover;
+  background-position: center center;
   background-repeat: no-repeat;
-  background-attachment: fixed; /* Keeps it fixed when scrolling */
+  background-attachment: fixed;
   color: rgb(153, 16, 16);
 }
 
