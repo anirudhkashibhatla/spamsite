@@ -68,6 +68,9 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
       setMessages((prev) => [...prev, receivedMessage]);
 
       if (receivedMessage.shouldAutoDelete && receivedMessage.duration > 0) {
+        console.log(
+          `Message with uniqueIndex ${receivedMessage.uniqueIndex} will be deleted after ${receivedMessage.duration} seconds.`
+        );
         setTimeout(() => {
           setMessages((prev) =>
             prev.filter(
@@ -287,10 +290,13 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
 
     const finalDuration =
       validMaxDuration === 0
-        ? 0
-        : !duration || isNaN(parsedDuration) || parsedDuration <= 0
-        ? validMaxDuration
-        : Math.min(parsedDuration, validMaxDuration);
+        ? isNaN(parsedDuration) || parsedDuration <= 0
+          ? 0
+          : parsedDuration
+        : Math.min(
+            parsedDuration > 0 ? parsedDuration : validMaxDuration,
+            validMaxDuration
+          );
     console.log("Final Duration:", finalDuration);
 
     const newMessage = {
@@ -315,7 +321,6 @@ const MessageBoard = ({ roomId, defaultRoomParams }) => {
     sendMessage(newMessage);
 
     if (newMessage.duration > 0) {
-      console.log("yes", newMessage.duration);
       setTimeout(() => {
         setMessages(
           (prev) =>

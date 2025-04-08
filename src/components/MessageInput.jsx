@@ -13,11 +13,11 @@ const MessageInput = ({
   postMessage,
   filter,
   setFilter,
-  maxDuration, // Add maxDuration as a prop
+  maxDuration,
 }) => {
   const fileInputRef = useRef(null);
-  const [preview, setPreview] = useState(null); // State to store the preview URL
-  const [previewType, setPreviewType] = useState(null); // State to store the type (image/video)
+  const [preview, setPreview] = useState(null);
+  const [previewType, setPreviewType] = useState(null);
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -30,10 +30,9 @@ const MessageInput = ({
       ];
       const validVideoTypes = ["video/mp4", "video/webm", "video/ogg"];
 
-      // Check if the file type is valid
       if (![...validImageTypes, ...validVideoTypes].includes(file.type)) {
         alert("Unsupported file type. Please upload an image or video.");
-        event.target.value = null; // Reset the file input
+        event.target.value = null;
         return;
       }
 
@@ -44,19 +43,19 @@ const MessageInput = ({
           url: e.target.result,
           type: fileType,
         });
-        setPreview(e.target.result); // Set the preview URL
-        setPreviewType(fileType); // Set the preview type
+        setPreview(e.target.result);
+        setPreviewType(fileType);
       };
       reader.readAsDataURL(file);
     }
-    // Reset the file input value to allow consecutive uploads of the same file
+
     event.target.value = null;
   };
 
   const handlePostMessage = () => {
-    postMessage(); // Call the parent `postMessage` function
-    setPreview(null); // Clear the preview
-    setPreviewType(null); // Clear the preview type
+    postMessage();
+    setPreview(null);
+    setPreviewType(null);
   };
 
   return (
@@ -90,10 +89,16 @@ const MessageInput = ({
         label="Type a message..."
         value={messageText}
         onChange={(e) => setMessageText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handlePostMessage();
+          }
+        }}
         size="small"
         multiline
-        minRows={1} // Starts with 3 rows
-        maxRows={4} // Expands up to 10 rows, then scrolls
+        minRows={1}
+        maxRows={4}
         fullWidth
         sx={{ flex: "1 1 300px" }}
       />
@@ -115,13 +120,12 @@ const MessageInput = ({
         sx={{ flex: "1 1 50px" }}
         slotProps={{
           input: {
-            min: 0, // Minimum value is 0
-            max: maxDuration || 3600, // Maximum value is maxDuration if provided
+            min: 0,
+            max: maxDuration || 3600, // maximum value is maxduration if provided
           },
         }}
       />
       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        {/* Small Preview Icon */}
         {preview && (
           <Box
             sx={{
